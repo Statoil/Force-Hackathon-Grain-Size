@@ -26,11 +26,12 @@ def stitch_images(directory="data", size=128):
         else:
             for file in files:
                 if file[-3:] == 'jpg':
-                    img_dict[subdir[5:10]].append(subdir + '/' + file)
+
+                    img_dict[file[:4]].append(subdir + '/' + file)
     for key, las in las_dict.items():
         las_df = get_grain_size_las(las)
         las_dict[key] = las_df
-    for key, well in img_dict.items():
+    for key_well, well in img_dict.items():
         merged_image, length_of_core = merge_well_images(well)
         for idx in range(100):
             index = random.randrange(75, merged_image.shape[0]-75, 1)
@@ -65,7 +66,7 @@ def stitch_images(directory="data", size=128):
             output['is_sand'].append(is_sand)
             output['grain_size'].append(grain_size)
             plt.close()
-        with open('turk_file.pkl') as f:
+        with open('turk_file' + key_well + '.pkl') as f:
             pickle.dump(output, f)
         print('here')
 
