@@ -40,9 +40,12 @@ def stitch_images(directory="data", size=128):
             notdone = True
             while notdone:
                 imshow(turk_img)
+                print('enter done here to quit doing this core, enter back at anytime to restart')
                 image_good = input('Image is good? 1 is yes 0 is no')
                 if image_good == 'back':
                     continue
+                if image_good == 'done':
+                    break
                 if image_good == '1':
                     is_sand = input('Image is sand? 1 is yes 0 is no')
                     if image_good == 'back':
