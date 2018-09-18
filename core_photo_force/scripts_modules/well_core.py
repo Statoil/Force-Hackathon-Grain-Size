@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tkinter import *
 import random
-
+import pickle
 
 def stitch_images(directory="data", size=128):
     # loop through each core image folder
@@ -62,7 +62,8 @@ def stitch_images(directory="data", size=128):
             output['is_sand'].append(is_sand)
             output['grain_size'].append(grain_size)
             plt.close()
-
+        with open('turk_file.pkl') as f:
+            pickle.dump(output, f)
         print('here')
 
 def get_grain_size_las(path):
