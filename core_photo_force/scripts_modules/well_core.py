@@ -43,11 +43,11 @@ def stitch_images(directory="data", size=128):
                 image_good = input('Image is good? 1 is yes 0 is no')
                 if image_good == 'back':
                     continue
-                if image_good == 1:
+                if image_good == '1':
                     is_sand = input('Image is sand? 1 is yes 0 is no')
                     if image_good == 'back':
                         continue
-                    if is_sand == 1:
+                    if is_sand == '1':
                         grain_size = input('Grain size 3-10:')
                         if image_good == 'back':
                             continue
