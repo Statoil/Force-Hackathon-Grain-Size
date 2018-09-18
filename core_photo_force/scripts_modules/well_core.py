@@ -142,7 +142,7 @@ def process_image(image):
     output['max h edge count'] = np.max(np.sum(edge_image, axis=0))
     output['max v edge count'] = np.max(np.sum(edge_image, axis=1))
     gabor = filters.gabor(image, frequency=0.2)
-    output['gabor filter sum'] = sum(sum(gabor))
+    output['gabor filter sum'] = sum(sum(sum((gabor))))
 
     vert_dilation = np.array([[0, 0, 1, 0, 0],
                               [0, 0, 1, 0, 0],
