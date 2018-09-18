@@ -37,17 +37,25 @@ def stitch_images(directory="data", size=128):
             turk_img = merged_image[index - 75: index + 75, :, :]
             current_plt = plt.imshow(turk_img)
             plt.show()
-            imshow(turk_img)
-            image_good = input('Image is good? 1 is yes 0 is no')
-            if image_good:
-                is_sand = input('Image is sand? 1 is yes 0 is no')
-                if is_sand:
-                    grain_size = input('Grain size 3-10:')
+            notdone = True
+            while notdone:
+                imshow(turk_img)
+                image_good = input('Image is good? 1 is yes 0 is no')
+                if image_good == 'back':
+                    continue
+                if image_good == 1:
+                    is_sand = input('Image is sand? 1 is yes 0 is no')
+                    if image_good == 'back':
+                        continue
+                    if is_sand == 1:
+                        grain_size = input('Grain size 3-10:')
+                        if image_good == 'back':
+                            continue
+                    else:
+                        grain_size = 0
                 else:
+                    is_sand = None
                     grain_size = None
-            else:
-                is_sand = None
-                grain_size = None
             output['img_Sample'].append(turk_img)
             output['is_good'].append(image_good)
             output['is_sand'].append(is_sand)
