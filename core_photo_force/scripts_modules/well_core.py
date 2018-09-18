@@ -4,11 +4,13 @@ import pandas as pd
 import pkg_resources
 from collections import defaultdict
 from skimage.io import imread, imread_collection, concatenate_images, imshow, imsave
+from skimage import feature, color, filters, morphology, segmentation
 import matplotlib.pyplot as plt
 import numpy as np
 from tkinter import *
 import random
 import pickle
+
 
 def stitch_images(directory="data", size=128):
     # loop through each core image folder
@@ -32,7 +34,7 @@ def stitch_images(directory="data", size=128):
         las_df = get_grain_size_las(las)
         las_dict[key] = las_df
     for key_well, well in img_dict.items():
-        merged_image, length_of_core = merge_well_images(well)
+        merged_image, depth_to_image_index, image_index_to_depth = merge_well_images(well)
         callbreak = False
         for idx in range(100):
             index = random.randrange(75, merged_image.shape[0]-75, 1)
@@ -86,6 +88,7 @@ def stitch_images(directory="data", size=128):
                 pickle.dump(output, f)
             print('here')
 
+
 def get_grain_size_las(path):
     w6406 = lasio.read(path)
     print(w6406.keys())
@@ -98,20 +101,65 @@ def get_grain_size_las(path):
     w64 = w6406[w6406 > 0].dropna()
     return w64
 
+
 def merge_well_images(well: list):
     output_img_list = []
+    output_img_dict = defaultdict(list)
+    cum_height = 0
     for idx, image in enumerate(well):
         print(idx / len(well))
         img = imread(image)
         width = img.shape[1]
+        height = img.shape[0]
         mid = int(width / 2)
         output_img = img[:, mid - 75:mid + 75, :]
         output_img_list.append(output_img)
-
+        image_split = image.split('.')
+        image_split2 = image_split[0].split('_')
+        output_img_dict['top_index'] = cum_height
+        output_img_dict['top_md'] = image_split2[9]
+        cum_height += height
         print('here')
+    depth_to_image_index = pd.Series(data=output_img_dict['top_index'], index=output_img_dict['top_md'])
+    image_index_to_depth = pd.Series(data=output_img_dict['top_md'], index=output_img_dict['top_index'])
     merged_image = np.concatenate(output_img_list)
-    return merged_image, len(well)
+    return merged_image, depth_to_image_index, image_index_to_depth
 
-class WellCore(object):
-    def stitch_core_photos(self, directory):
-        pass
+
+def process_image(image):
+    output = defaultdict(list)
+    color_img = image
+    output['Sum Red'] = sum(sum(color_img[:, :, 0]))
+    output['Sum Green'] = sum(sum(color_img[:, :, 1]))
+    output['Sum Blue'] = sum(sum(color_img[:, :, 2]))
+    image = color.rgb2gray(image)
+    output['Sum Luminance'] = sum(sum(image))
+    edge_image = feature.canny(image, 0.2)
+    v_edges = filters.sobel_v(image)
+    output['Sobel V sum'] = sum(sum(v_edges))
+    h_edges = filters.sobel_h(image)
+    output['Sobel H sum'] = sum(sum(h_edges))
+    output['max h edge count'] = np.max(np.sum(edge_image, axis=0))
+    output['max v edge count'] = np.max(np.sum(edge_image, axis=1))
+    gabor = filters.gabor(image, frequency=0.2)
+    output['gabor filter sum'] = sum(sum(gabor))
+
+    vert_dilation = np.array([[0, 0, 1, 0, 0],
+                              [0, 0, 1, 0, 0],
+                              [0, 0, 1, 0, 0],
+                              [0, 0, 1, 0, 0],
+                              [0, 0, 1, 0, 0]], dtype=np.uint8)
+    horz_dilation = np.array([[0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0],
+                              [1, 1, 1, 1, 1],
+                              [0, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 0]], dtype=np.uint8)
+    vert_img = morphology.dilation(edge_image, vert_dilation)
+    horz_img = morphology.dilation(edge_image, horz_dilation)
+    segmented_img = segmentation.quickshift(color_img)
+
+    output['Dilated Vert Image'] = np.sum(np.sum(vert_img, axis=1))
+    output['Dilated Horz Image'] = np.sum(np.sum(horz_img, axis=1))
+    output['Segment Count'] = no_of_segments = len(np.unique(segmented_img))
+    output_series = pd.Series(output)
+    return output_series
