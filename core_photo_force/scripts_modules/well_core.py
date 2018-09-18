@@ -56,6 +56,7 @@ def stitch_images(directory="data", size=128):
                 else:
                     is_sand = None
                     grain_size = None
+                notdone = False
             output['img_Sample'].append(turk_img)
             output['is_good'].append(image_good)
             output['is_sand'].append(is_sand)
