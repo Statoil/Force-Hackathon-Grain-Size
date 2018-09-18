@@ -26,12 +26,14 @@ def stitch_images(directory="data", size=128):
         else:
             for file in files:
                 if file[-3:] == 'jpg':
-                    img_dict[subdir[5:10]].append(subdir + '/' + file)
+
+                    img_dict[file[:4]].append(subdir + '/' + file)
     for key, las in las_dict.items():
         las_df = get_grain_size_las(las)
         las_dict[key] = las_df
-    for key, well in img_dict.items():
+    for key_well, well in img_dict.items():
         merged_image, length_of_core = merge_well_images(well)
+        callbreak = False
         for idx in range(100):
             index = random.randrange(75, merged_image.shape[0]-75, 1)
             turk_img = merged_image[index - 75: index + 75, :, :]
@@ -45,29 +47,44 @@ def stitch_images(directory="data", size=128):
                 if image_good == 'back':
                     continue
                 if image_good == 'done':
+                    callbreak = True
                     break
                 if image_good == '1':
                     is_sand = input('Image is sand? 1 is yes 0 is no')
                     if image_good == 'back':
                         continue
                     if is_sand == '1':
-                        grain_size = input('Grain size 3-10:')
-                        if image_good == 'back':
+
+                        grain_size = input('Grain size 3-10 :')
+                        if grain_size == 'back':
                             continue
+
                     else:
                         grain_size = 0
+
+                    print('Sed Structure codes : 1 = Massive/None,'
+                          ' 2 = Laminated,'
+                          ' 3 = Cross Stratification,'
+                          ' 4 = burrows')
+                    sed_facies = input('Input Sed Structure Code: ')
                 else:
                     is_sand = None
                     grain_size = None
+                    sed_facies = None
                 notdone = False
+            if callbreak:
+                break
             output['img_Sample'].append(turk_img)
             output['is_good'].append(image_good)
             output['is_sand'].append(is_sand)
             output['grain_size'].append(grain_size)
+            output['sed_structure_code'].append(sed_facies)
             plt.close()
-        with open('turk_file.pkl') as f:
-            pickle.dump(output, f)
-        print('here')
+
+        if len(output['img_Sample']) > 0:
+            with open('turk_file' + key_well + '.pkl', 'wb') as f:
+                pickle.dump(output, f)
+            print('here')
 
 def get_grain_size_las(path):
     w6406 = lasio.read(path)
