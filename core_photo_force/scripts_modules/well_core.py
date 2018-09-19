@@ -120,10 +120,10 @@ def merge_well_images(well: list):
         output_img_dict['top_md'] = image_split2[9]
         cum_height += height
         print('here')
-    #depth_to_image_index = pd.Series(data=output_img_dict['top_index'], index=output_img_dict['top_md'])
-    #image_index_to_depth = pd.Series(data=output_img_dict['top_md'], index=output_img_dict['top_index'])
+    depth_to_image_index = pd.Series(data=output_img_dict['top_index'], index=output_img_dict['top_md'])
+    image_index_to_depth = pd.Series(data=output_img_dict['top_md'], index=output_img_dict['top_index'])
     merged_image = np.concatenate(output_img_list)
-    return merged_image#, depth_to_image_index, image_index_to_depth
+    return merged_image, depth_to_image_index, image_index_to_depth
 
 
 def process_image(image):
@@ -160,6 +160,6 @@ def process_image(image):
 
     output['Dilated Vert Image'] = np.sum(np.sum(vert_img, axis=1))
     output['Dilated Horz Image'] = np.sum(np.sum(horz_img, axis=1))
-    output['Segment Count'] = no_of_segments = len(np.unique(segmented_img))
+    output['Segment Count'] = len(np.unique(segmented_img))
     output_series = pd.Series(output)
     return output_series
