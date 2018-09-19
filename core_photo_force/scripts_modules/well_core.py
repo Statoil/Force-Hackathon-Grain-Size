@@ -34,7 +34,7 @@ def stitch_images(directory="data", size=128):
         las_df = get_grain_size_las(las)
         las_dict[key] = las_df
     for key_well, well in img_dict.items():
-        merged_image, depth_to_image_index, image_index_to_depth = merge_well_images(well)
+        merged_image  = merge_well_images(well) #, depth_to_image_index, image_index_to_depth
         callbreak = False
         for idx in range(100):
             index = random.randrange(75, merged_image.shape[0]-75, 1)
@@ -120,10 +120,10 @@ def merge_well_images(well: list):
         output_img_dict['top_md'] = image_split2[9]
         cum_height += height
         print('here')
-    depth_to_image_index = pd.Series(data=output_img_dict['top_index'], index=output_img_dict['top_md'])
-    image_index_to_depth = pd.Series(data=output_img_dict['top_md'], index=output_img_dict['top_index'])
+    # depth_to_image_index = pd.Series(data=output_img_dict['top_index'], index=output_img_dict['top_md'])
+    # image_index_to_depth = pd.Series(data=output_img_dict['top_md'], index=output_img_dict['top_index'])
     merged_image = np.concatenate(output_img_list)
-    return merged_image, depth_to_image_index, image_index_to_depth
+    return merged_image#, depth_to_image_index, image_index_to_depth
 
 
 def process_image(image):
@@ -163,3 +163,92 @@ def process_image(image):
     output['Segment Count'] = len(np.unique(segmented_img))
     output_series = pd.Series(output)
     return output_series
+
+
+def test_trained_models(directory="data", size=128):
+    path = pkg_resources.resource_filename('core_photo_force', directory)
+    las_dict = defaultdict(list)
+    img_dict = defaultdict(list)
+    output = defaultdict(list)
+    objects = []
+    with open('/Volumes/Samsung_T5/Hackathon/Force-Hackathon-Grain-Size/trained_models.pkl', 'rb') as f:
+        while True:
+            try:
+                objects.append(pickle.load(f))
+            except EOFError:
+                break
+    models = objects[0]
+    for subdir, dirs, files in os.walk(path):
+        print(files)
+        if subdir[-len(directory):] == directory:
+            for file in files:
+                if file[-3:] == 'las':
+                    las_dict[file[:4]] = path + '/' + file
+        else:
+            for file in files:
+                if file[-3:] == 'jpg':
+                    img_dict[file[:4]].append(subdir + '/' + file)
+        for key_well, well in img_dict.items():
+            merged_image = merge_well_images(well)
+            merged_image.shape[0]
+            output = []
+            counter = 0
+            output_image = np.zeros((merged_image.shape[0], 200, 3))
+            output_image[:, :150, :] = merged_image
+            for x in range(75, merged_image.shape[0]-75, 20):
+                counter += 1
+                img_sample = merged_image[x- 75: x + 75, :, :]
+                current_series = process_image(img_sample)
+                series_frame = current_series.to_frame()
+                predictions = run_trained_models_on_frame(series_frame.T, models)
+                csr_mtrx = predictions[2][0]
+                sed_structures_predict = csr_mtrx.toarray()
+                if int(predictions[0][0]) == 0:
+                    output_image[x-10:x+10, 150:, 0] = 255
+                    output_image[x - 10:x + 10, 150:, 1] = 0
+                    output_image[x - 10:x + 10, 150:, 2] = 0
+                    series_frame['good_core_sample'] = False
+                else:
+                    output_image[x - 10:x + 10, 150:160, 0] = 0
+                    output_image[x - 10:x + 10, 150:160, 1] = 255
+                    output_image[x - 10:x + 10, 150:160, 2] = 0
+                    series_frame['good_core_sample'] = True
+                    if int(predictions[0][0]) == 0:
+                        output_image[x - 10:x + 10, 160:180, 0] = 0
+                        output_image[x - 10:x + 10, 150:180, 1] = 0
+                        output_image[x - 10:x + 10, 150:180, 2] = 255
+                        series_frame['sand'] = False
+                    else:
+                        output_image[x - 10:x + 10, 160:180, 0] = 255
+                        output_image[x - 10:x + 10, 150:180, 1] = 255
+                        output_image[x - 10:x + 10, 150:180, 2] = 0
+                        series_frame['sand'] = True
+
+
+                # TODO: get depth index
+                output.append(process_image(img_sample))
+                if counter == 100:
+                    break
+
+
+def run_trained_models_on_frame(frame, models_dict):
+    scaler = models_dict['scaler']
+    #encoder = models_dict['one_hot']
+    model = models_dict['good_photo_sample_model']
+    model2 = models_dict['good_photo_sample_model']
+    model3 = models_dict['sed_structures']
+
+    feature_cols = ['Dilated Horz Image', 'Dilated Vert Image', 'Segment Count',
+                    'Sobel H sum', 'Sobel V sum', 'Sum Blue', 'Sum Green', 'Sum Luminance',
+                    'Sum Red', 'max h edge count', 'max v edge count']
+    x_table = frame[feature_cols]
+    X_test = scaler.transform(x_table)
+    good_core_pred = model.predict(X_test)
+    sand_core_pred = model2.predict(X_test)
+    sed_preds = model3.predict(X_test)
+
+    return good_core_pred, sand_core_pred, sed_preds
+
+
+
+
