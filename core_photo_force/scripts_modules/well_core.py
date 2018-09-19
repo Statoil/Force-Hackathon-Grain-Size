@@ -178,6 +178,7 @@ def test_trained_models(directory="data", size=128):
             except EOFError:
                 break
     models = objects[0]
+    output_results = []
     for subdir, dirs, files in os.walk(path):
         print(files)
         if subdir[-len(directory):] == directory:
@@ -188,14 +189,18 @@ def test_trained_models(directory="data", size=128):
             for file in files:
                 if file[-3:] == 'jpg':
                     img_dict[file[:4]].append(subdir + '/' + file)
+        counter_well = 0
         for key_well, well in img_dict.items():
+            counter_well += 1
+            if counter_well == 1:
+                continue
             merged_image = merge_well_images(well)
             merged_image.shape[0]
             output = []
             counter = 0
-            output_image = np.zeros((merged_image.shape[0], 200, 3))
+            output_image = np.zeros((merged_image.shape[0], 200, 3), dtype=np.uint8)
             output_image[:, :150, :] = merged_image
-            for x in range(75, merged_image.shape[0]-75, 20):
+            for x in range(75, merged_image.shape[0]-75, 10):
                 counter += 1
                 img_sample = merged_image[x- 75: x + 75, :, :]
                 current_series = process_image(img_sample)
@@ -204,31 +209,69 @@ def test_trained_models(directory="data", size=128):
                 csr_mtrx = predictions[2][0]
                 sed_structures_predict = csr_mtrx.toarray()
                 if int(predictions[0][0]) == 0:
-                    output_image[x-10:x+10, 150:, 0] = 255
-                    output_image[x - 10:x + 10, 150:, 1] = 0
-                    output_image[x - 10:x + 10, 150:, 2] = 0
-                    series_frame['good_core_sample'] = False
+                    output_image[x-5:x+5, 150:200, 0] = 255
+                    output_image[x - 5:x + 5, 150:200, 1] = 0
+                    output_image[x - 5:x + 5, 150:200, 2] = 0
+                    current_series['good_core_sample'] = False
+                    current_series['sand'] = None
+                    current_series['structures'] = None
                 else:
-                    output_image[x - 10:x + 10, 150:160, 0] = 0
-                    output_image[x - 10:x + 10, 150:160, 1] = 255
-                    output_image[x - 10:x + 10, 150:160, 2] = 0
-                    series_frame['good_core_sample'] = True
-                    if int(predictions[0][0]) == 0:
-                        output_image[x - 10:x + 10, 160:180, 0] = 0
-                        output_image[x - 10:x + 10, 150:180, 1] = 0
-                        output_image[x - 10:x + 10, 150:180, 2] = 255
-                        series_frame['sand'] = False
+                    output_image[x - 5:x + 5, 150:160, 0] = 0
+                    output_image[x - 5:x + 5, 150:160, 1] = 255
+                    output_image[x - 5:x + 5, 150:160, 2] = 0
+                    current_series['good_core_sample'] = True
+                    if int(predictions[0][0]) == 1:
+                        output_image[x - 5:x + 5, 160:180, 0] = 255
+                        output_image[x - 5:x + 5, 160:180, 1] = 255
+                        output_image[x - 5:x + 5, 160:180, 2] = 0
+                        current_series['sand'] = True
                     else:
-                        output_image[x - 10:x + 10, 160:180, 0] = 255
-                        output_image[x - 10:x + 10, 150:180, 1] = 255
-                        output_image[x - 10:x + 10, 150:180, 2] = 0
-                        series_frame['sand'] = True
+                        output_image[x - 5:x + 5, 160:180, 0] = 0
+                        output_image[x - 5:x + 5, 160:180, 1] = 0
+                        output_image[x - 5:x + 5, 160:180, 2] = 255
+                        current_series['sand'] = True
+                    if int(sed_structures_predict[:, 0]) == 1:
+                        # MASSIVE
+                        output_image[x - 5:x + 5, 180:200, 0] = 255
+                        output_image[x - 5:x + 5, 180:200, 1] = 255
+                        output_image[x - 5:x + 5, 180:200, 2] = 0
+                        current_series['structures'] = "MASSIVE"
+                    elif int(sed_structures_predict[:, 1]) == 1:
+                        # Laminated
+                        output_image[x - 5:x + 5, 180:200, 0] = 0
+                        output_image[x - 5:x + 5, 180:200, 1] = 0
+                        output_image[x - 5:x + 5, 180:200, 2] = 0
+                        current_series['structures'] = "LAMINATED"
+                    elif int(sed_structures_predict[:, 2]) == 1:
+                        # X-stratified
+                        output_image[x - 5:x + 5, 180:200, 0] = 255
+                        output_image[x - 5:x + 5, 180:200, 1] = 69
+                        output_image[x - 5:x + 5, 180:200, 2] = 0
+                        current_series['structures'] = "X-Strat"
+                    elif int(sed_structures_predict[:, 3]) == 1:
+                        # Burrowed
+                        output_image[x - 5:x + 5, 180:200, 0] = 139
+                        output_image[x - 5:x + 5, 180:200, 1] = 69
+                        output_image[x - 5:x + 5, 180:200, 2] = 19
+                        current_series['structures'] = "Burrowed"
+                    else:
+                        output_image[x - 5:x + 5, 180:200, 0] = 255
+                        output_image[x - 5:x + 5, 180:200, 1] = 255
+                        output_image[x - 5:x + 5, 180:200, 2] = 255
+                        current_series['structures'] = "None"
+
 
 
                 # TODO: get depth index
-                output.append(process_image(img_sample))
-                if counter == 100:
-                    break
+                output.append(current_series)
+                if counter % 10 == 0:
+                    print(x / output_image.shape[0])
+
+            pred_output_dataframe = pd.concat(output, axis=1)
+            output_results.append(pred_output_dataframe.T)
+            path = '/Volumes/Samsung_T5/Hackathon/Force-Hackathon-Grain-Size/data/'
+            with open(path + well + '.jpg', 'wb') as f:
+                imsave(f, output_image, quality=50)
 
 
 def run_trained_models_on_frame(frame, models_dict):
