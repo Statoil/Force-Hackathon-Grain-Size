@@ -12,6 +12,20 @@ import random
 import pickle
 
 
+class WellCore(object):
+    """Create a cored well object from a photo directory, track depth/scale, turk labels, and more"""
+
+    # TODO: Initialize object using a directory of separate photos
+
+    # TODO: Stitch photo together
+
+    # TODO: Track and save labels
+
+    # TODO: Initialize D3 visualization of core and current labels
+
+    pass
+
+
 def stitch_images(directory="data", size=128):
     # loop through each core image folder
     plt.interactive(False)
