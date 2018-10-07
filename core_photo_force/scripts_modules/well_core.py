@@ -13,10 +13,16 @@ import pickle
 
 
 class WellCore(object):
+    image_array = None
+    start_depth = None
+    end_depth = None
+    pixels_per_depth_unit = None
+    depth_unit = 'M'
     """Create a cored well object from a photo directory, track depth/scale, turk labels, and more"""
 
     # TODO: Initialize object using a directory of separate photos
-
+    def __init__(self, directory_path, start_depth, end_depth):
+        pass
     # TODO: Stitch photo together
 
     # TODO: Track and save labels
@@ -24,6 +30,15 @@ class WellCore(object):
     # TODO: Initialize D3 visualization of core and current labels
 
     pass
+
+    def _load_image(self, file_path, start_depth, end_depth):
+        img = imread(file_path)
+        width = img.shape[1]
+        height = img.shape[0]
+        # check scale
+
+        # set loaded image to merged array at the proper indicies
+        
 
 
 def stitch_images(directory="data", size=128):
