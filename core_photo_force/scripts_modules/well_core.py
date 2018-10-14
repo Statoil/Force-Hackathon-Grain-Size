@@ -22,9 +22,24 @@ class WellCore(object):
 
     # TODO: Initialize object using a directory of separate photos
     def __init__(self, directory_path, start_depth, end_depth):
-        pass
-    # TODO: Stitch photo together
+        # TODO: Stitch photo together
+        self.start_depth = start_depth
+        self.end_depth = end_depth
+        img_dict = defaultdict(list)
+        for subdir, dirs, files in os.walk(directory_path):
+            print(files)
+            for file in files:
+                if file[-3:] == 'jpg':
+                    img_dict[file[:4]].append(subdir + '/' + file)
+        for key_well, well in img_dict.items():
+            for img_file in well:
+                file_pieces = img_file.split('_')
+                start_depth = float(file_pieces[-2:-1][0])
+                end_depth = float(file_pieces[-1:][0][:-4])
+                self._load_image(img_file, start_depth, end_depth)
 
+        # imsave('qc_image.png', self.image_array)
+        print('here')
     # TODO: Track and save labels
 
     # TODO: Initialize D3 visualization of core and current labels
@@ -35,11 +50,45 @@ class WellCore(object):
         img = imread(file_path)
         width = img.shape[1]
         height = img.shape[0]
+        mid = int(width / 2)
+        img = img[:, mid - 75:mid + 75, :]
+        width = img.shape[1]
+        height_in_depth_unit = end_depth - start_depth
+        if height_in_depth_unit == 0:
+            height_in_depth_unit = height / self.pixels_per_depth_unit
         # check scale
+        try:
+            pixels_per_depth_unit = height / height_in_depth_unit
+        except ZeroDivisionError:
+            print('error')
+        if self.pixels_per_depth_unit is None:
+            self.pixels_per_depth_unit = pixels_per_depth_unit
+        else:
+            # validate that depth unit is somewhat consistent
+            pass
 
         # set loaded image to merged array at the proper indicies
-        
+        if self.image_array is None:
+            # initialize image array
+            self.image_array = np.zeros((int(pixels_per_depth_unit * (self.end_depth - self.start_depth)), width, 3),
+                                        dtype=np.uint8)
+        start_idx, end_idx = self.compute_image_index(start_depth, end_depth)
+        if end_idx >= self.image_array.shape[0]:
+            orig_end_indx = end_idx
+            end_idx = self.image_array.shape[0] - 1
+            indx_diff = end_idx - orig_end_indx
+        else:
+            indx_diff = 0
+        # idx_size = int(end_idx-start_idx)
+        try:
+            self.image_array[start_idx:start_idx+height+indx_diff, :, :] = img[indx_diff:, :, :]
+        except ValueError:
+            print('error')
 
+    def compute_image_index(self, start_depth, end_depth):
+        start_idx = (start_depth - self.start_depth) * self.pixels_per_depth_unit
+        end_idx = (end_depth - self.start_depth) * self.pixels_per_depth_unit
+        return int(start_idx), int(end_idx)
 
 def stitch_images(directory="data", size=128):
     # loop through each core image folder
